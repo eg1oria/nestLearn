@@ -35,6 +35,4 @@ export class CreateTaskDto {
   @IsEnum(TaskTag, { each: true })
   @IsArray()
   tags: TaskTag[];
-
-  password: string;
 }
