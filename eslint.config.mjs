@@ -17,7 +17,6 @@ export default tseslint.config(
         ...globals.node,
         ...globals.jest,
       },
-      // 👇 ИЗМЕНИТЕ ЭТУ СТРОКУ
       sourceType: 'module', 
       parserOptions: {
         project: ['./tsconfig.json'],
@@ -27,12 +26,13 @@ export default tseslint.config(
   },
   {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      // Если правило no-unsafe-call всё равно мешает (иногда бывает с внешними либами),
-      // можно понизить его уровень до warning или выключить:
-      '@typescript-eslint/no-unsafe-call': 'warn', 
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'off',
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
