@@ -25,6 +25,11 @@ async function bootstrap() {
     customCss: '.swagger-ui { filter: none !important; }',
   });
 
+  app.enableCors({
+    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    credentials: true,
+  });
+
   await app.listen(3000);
 }
 bootstrap();
