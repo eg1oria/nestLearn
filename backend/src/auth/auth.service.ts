@@ -13,7 +13,6 @@ import { LoginRequest } from './dto/login.dto';
 import type { Request, Response } from 'express';
 import { isDev } from 'src/utils/is.dev.util';
 import { JwtPayload } from './interfaces/jwt.interface';
-import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -146,14 +145,18 @@ export class AuthService {
   }
 
   logout(res: Response) {
-    this.setCookie(res, 'refreshToken', new Date(0));
+    this.setCookie(res, '', new Date(0));
     return true;
   }
 
-  async validate(id: string): Promise<User> {
+  async validate(id: string) {
     const user = await this.prismaService.user.findUnique({
       where: {
         id,
+      },
+      select: {
+        name: true,
+        email: true,
       },
     });
 

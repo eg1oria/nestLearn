@@ -1,33 +1,12 @@
+import { request, Utils } from './apiConfig';
+
 export type TaskCreateDto = {
   title: string;
   description: string;
   isCompleted: boolean;
 };
 
-export type Task = TaskCreateDto & {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-const API_URL = 'http://localhost:3000';
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options?.headers ?? {}),
-    },
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || `Request failed: ${res.status}`);
-  }
-
-  return res.json() as Promise<T>;
-}
+export type Task = TaskCreateDto & Utils;
 
 export const taskApi = {
   create(dto: TaskCreateDto) {

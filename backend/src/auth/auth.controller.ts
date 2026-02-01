@@ -92,9 +92,14 @@ export class AuthController {
   }
 
   @Authorization()
-  @Get(':id')
+  @ApiOperation({ summary: 'Текущий пользователь' })
+  @ApiOkResponse({
+    description: 'Возвращает текущего пользователя по access token',
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @Get('me')
   @HttpCode(HttpStatus.OK)
-  me(@Authorized() user: User): User {
+  me(@Authorized() user: User) {
     return user;
   }
 }
