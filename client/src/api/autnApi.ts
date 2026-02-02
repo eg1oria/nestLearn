@@ -1,8 +1,10 @@
 import { request } from './apiConfig';
+import { Task } from './taskApi';
 
 export type RegisterDto = {
   name: string;
   email: string;
+  phone: string;
   password: string;
 };
 
@@ -14,7 +16,10 @@ export type LoginDto = {
 export type User = {
   id: string;
   email: string;
+  phone: string;
   name?: string;
+  tasks?: Task[];
+  role: 'USER' | 'ADMIN';
 };
 
 type TokenResponse = {
@@ -44,9 +49,22 @@ export const authApi = {
       method: 'POST',
     });
   },
-  me() {
+  me(token: string) {
     return request<User>(`/auth/me`, {
       method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+  findAll() {
+    return request<User[]>('/auth/admin/users', {
+      method: 'GET',
+    });
+  },
+  delete(id: string) {
+    return request<boolean>(`/auth/delete/${id}`, {
+      method: 'DELETE',
     });
   },
 };

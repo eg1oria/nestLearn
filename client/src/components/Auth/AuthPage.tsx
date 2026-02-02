@@ -22,6 +22,7 @@ export default function AuthPage() {
   const [registerForm, setRegisterForm] = useState<RegisterDto>({
     name: '',
     email: '',
+    phone: '+7',
     password: '',
   });
 
@@ -102,7 +103,11 @@ export default function AuthPage() {
 
             {error && <p className="error-message">{error}</p>}
 
-            <button type="button" onClick={handleLogin} disabled={loading} className="submit-button">
+            <button
+              type="button"
+              onClick={handleLogin}
+              disabled={loading}
+              className="submit-button">
               {loading ? 'Вход...' : 'Войти'}
             </button>
           </div>
@@ -128,6 +133,15 @@ export default function AuthPage() {
 
             <div className="input-group">
               <input
+                type="tel"
+                placeholder="Phone"
+                value={registerForm.phone}
+                onChange={(e) => setRegisterForm((p) => ({ ...p, phone: e.target.value }))}
+              />
+            </div>
+
+            <div className="input-group">
+              <input
                 type="password"
                 placeholder="Пароль"
                 value={registerForm.password}
@@ -137,7 +151,11 @@ export default function AuthPage() {
 
             {error && <p className="error-message">{error}</p>}
 
-            <button type="button" onClick={handleRegister} disabled={loading} className="submit-button">
+            <button
+              type="button"
+              onClick={handleRegister}
+              disabled={loading}
+              className="submit-button">
               {loading ? 'Регистрация...' : 'Зарегистрироваться'}
             </button>
           </div>

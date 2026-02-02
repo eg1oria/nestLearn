@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUserLoading, setIsUserLoading] = useState(false);
 
   const isAuthenticated = Boolean(token);
 
@@ -66,12 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshMe = useCallback(async () => {
     if (!token) return;
 
+    setIsUserLoading(true);
     try {
-      const me = await authApi.me();
+      const me = await authApi.me(token);
       setSession(token, me);
     } catch (e) {
       clearSession();
       throw e;
+    } finally {
+      setIsUserLoading(false);
     }
   }, [token, setSession, clearSession]);
 
@@ -85,10 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && token && !user) {
+    if (!isLoading && token) {
       refreshMe().catch(() => {});
     }
-  }, [isLoading, token, user, refreshMe]);
+  }, [isLoading, token, refreshMe]);
 
   const login = useCallback(
     async (dto: LoginDto) => {
@@ -97,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newToken = res.accessToken;
 
       setSession(newToken, null);
-      const me = await authApi.me();
+      const me = await authApi.me(newToken);
       setSession(newToken, me);
     },
     [setSession],
@@ -115,14 +119,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       token,
       user,
-      isLoading,
+      isLoading: isLoading || isUserLoading,
       isAuthenticated,
       login,
       logout,
       setSession,
       refreshMe,
     }),
-    [token, user, isLoading, isAuthenticated, login, logout, setSession, refreshMe],
+    [token, user, isLoading, isAuthenticated, isUserLoading, login, logout, setSession, refreshMe],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

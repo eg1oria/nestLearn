@@ -1,14 +1,10 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  Patch,
   Post,
-  Put,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { TaskResponse } from './dto/task-create.dto';
@@ -18,6 +14,9 @@ import {
   ApiOkResponse,
   ApiOperation,
 } from '@nestjs/swagger';
+import { Authorization } from 'src/auth/decorators/auth.decorator';
+import type { User } from '@prisma/client';
+import { Authorized } from 'src/auth/decorators/authorized.decorator';
 
 @Controller('tasks')
 export class TasksController {
@@ -28,58 +27,21 @@ export class TasksController {
   })
   @ApiBadRequestResponse({ description: 'Некорректные входные данные' })
   @ApiOkResponse({ type: TaskResponse })
+  @Authorization()
   @HttpCode(HttpStatus.CREATED)
   @Post()
-  create(@Body() dto: TaskResponse) {
-    return this.tasksService.create(dto);
+  create(@Body() dto: TaskResponse, @Authorized() user: User) {
+    return this.tasksService.create(dto, user.id);
   }
 
   @ApiOperation({
-    summary: 'Возврат всех задач',
+    summary: 'Возврат всех задач пользователя',
   })
   @ApiOkResponse({ type: [TaskResponse] })
   @ApiNotFoundResponse({ description: 'Задачи не найдены' })
+  @Authorization()
   @Get()
-  getAll() {
-    return this.tasksService.getAll();
-  }
-
-  @ApiOperation({
-    summary: 'Возврат одной задачи',
-  })
-  @ApiNotFoundResponse({
-    description: 'Задача не найдена',
-  })
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: TaskResponse })
-  @Get(':id')
-  getById(@Param('id') id: string) {
-    return this.tasksService.getById(id);
-  }
-
-  @ApiOperation({
-    summary: 'Редактировать задачу',
-  })
-  @Put(':id')
-  update(@Body() dto: TaskResponse, @Param('id') id: string) {
-    return this.tasksService.updateOne(id, dto);
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Удалить задачу',
-  })
-  @ApiOkResponse({ type: Boolean })
-  @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.tasksService.delete(id);
-  }
-
-  @ApiOperation({
-    summary: 'Редактировать задачу',
-  })
-  @Patch(':id')
-  setIsCompleted(@Param('id') id: string, @Body() dto: Partial<TaskResponse>) {
-    return this.tasksService.setIsComplete(id, dto);
+  getAll(@Authorized() user: User) {
+    return this.tasksService.getAll(user.id);
   }
 }

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -25,6 +26,14 @@ export class RegisterRequest {
   @IsNotEmpty()
   @IsEmail()
   email: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    description: 'Номер телефона',
+    example: '+77054424389',
+  })
+  phone: string;
 
   @ApiProperty({
     description: 'Пароль',

@@ -36,7 +36,7 @@ export class AuthService {
   }
 
   async register(res: Response, dto: RegisterRequest) {
-    const { name, email, password } = dto;
+    const { name, email, password, phone } = dto;
 
     const existUser = await this.prismaService.user.findUnique({
       where: {
@@ -52,6 +52,7 @@ export class AuthService {
       data: {
         name,
         email,
+        phone: phone?.trim() || null,
         password: await hash(password),
       },
     });
@@ -155,8 +156,10 @@ export class AuthService {
         id,
       },
       select: {
+        id: true,
         name: true,
         email: true,
+        role: true,
       },
     });
 
@@ -165,5 +168,36 @@ export class AuthService {
     }
 
     return user;
+  }
+  async findAll() {
+    const users = await this.prismaService.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        tasks: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            isCompleted: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    return users;
+  }
+
+  async delete(id: string) {
+    return this.prismaService.$transaction(async (tx) => {
+      await tx.task.deleteMany({ where: { userId: id } });
+      await tx.user.delete({ where: { id } });
+      return true;
+    });
   }
 }

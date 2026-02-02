@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   Res,
@@ -24,6 +26,7 @@ import { AuthResponse } from './dto/auth.dto';
 import { Authorization } from './decorators/auth.decorator';
 import { Authorized } from './decorators/authorized.decorator';
 import type { User } from '@prisma/client';
+import { Roles } from './decorators/roles.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -101,5 +104,17 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   me(@Authorized() user: User) {
     return user;
+  }
+
+  @Authorization()
+  @Roles('ADMIN')
+  @Get('admin/users')
+  findAll() {
+    return this.authService.findAll();
+  }
+
+  @Delete(`delete/:id`)
+  delete(@Param('id') id: string) {
+    return this.authService.delete(id);
   }
 }
