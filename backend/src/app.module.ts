@@ -1,30 +1,30 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { TasksModule } from './tasks/tasks.module';
-import { ProjectsModule } from './projects/projects.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { getGraphQLConfig } from './config/graphQl.config';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ApolloDriver } from '@nestjs/apollo';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
+import { ChatModule } from './chat/chat.module';
+import { ArtistModule } from './artist/artist.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    GraphQLModule.forRootAsync<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync({
       driver: ApolloDriver,
+      imports: [ConfigModule],
       useFactory: getGraphQLConfig,
+      inject: [ConfigService],
     }),
     PrismaModule,
     AuthModule,
-    TasksModule,
-    ProjectsModule,
+    UserModule,
+    ChatModule,
+    ArtistModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

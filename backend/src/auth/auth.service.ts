@@ -4,47 +4,46 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { RegisterRequest } from './dto/register.dto';
-import { hash, verify } from 'argon2';
 import { ConfigService } from '@nestjs/config';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
-import { LoginRequest } from './dto/login.dto';
-import type { Request, Response } from 'express';
-import { isDev } from 'src/utils/is.dev.util';
+import { JwtService } from '@nestjs/jwt';
+import { hash, verify } from 'argon2';
+import { Request, Response } from 'express';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { RegisterInput } from './inputs/register.input';
 import { JwtPayload } from './interfaces/jwt.interface';
+import { isDev } from 'src/utils/is.dev.util';
+import { LoginInput } from './inputs/login.input';
 
 @Injectable()
 export class AuthService {
   private readonly JWT_ACCESS_TOKEN_TTL: string;
   private readonly JWT_REFRESH_TOKEN_TTL: string;
-
   private readonly COOKIE_DOMAIN: string;
+
   constructor(
     private readonly prismaService: PrismaService,
-
-    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {
-    this.COOKIE_DOMAIN = configService.getOrThrow<string>('COOKIE_DOMAIN');
     this.JWT_ACCESS_TOKEN_TTL = configService.getOrThrow<string>(
       'JWT_ACCESS_TOKEN_TTL',
     );
     this.JWT_REFRESH_TOKEN_TTL = configService.getOrThrow<string>(
       'JWT_REFRESH_TOKEN_TTL',
     );
+    this.COOKIE_DOMAIN = configService.getOrThrow<string>('COOKIE_DOMAIN');
   }
 
-  async register(res: Response, dto: RegisterRequest) {
-    const { name, email, password, phone } = dto;
+  async register(res: Response, dto: RegisterInput) {
+    const { name, email, password } = dto;
 
-    const existUser = await this.prismaService.user.findUnique({
+    const exitUser = await this.prismaService.user.findUnique({
       where: {
         email,
       },
     });
 
-    if (existUser) {
+    if (exitUser) {
       throw new ConflictException('Пользователь с такой почтой уже существует');
     }
 
@@ -52,15 +51,16 @@ export class AuthService {
       data: {
         name,
         email,
-        phone: phone?.trim() || null,
         password: await hash(password),
       },
     });
+
     return this.auth(res, user.id);
   }
 
-  async login(res: Response, dto: LoginRequest) {
+  async login(res: Response, dto: LoginInput) {
     const { email, password } = dto;
+
     const user = await this.prismaService.user.findUnique({
       where: {
         email,
@@ -75,25 +75,77 @@ export class AuthService {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    const isVerified = await verify(user.password, password);
+    const isValidPassword = await verify(user.password, password);
 
-    if (!isVerified) {
+    if (!isValidPassword) {
       throw new NotFoundException('Пользователь не найден');
     }
 
     return this.auth(res, user.id);
   }
 
+  logout(res: Response) {
+    this.setCookie(res, 'refreshToken', new Date(0));
+
+    return true;
+  }
+
+  async validate(id: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Пользователь не найден');
+    }
+
+    return user;
+  }
+
+  async refresh(req: Request, res: Response) {
+    const refreshToken = req.cookies['refreshToken'];
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Недействительный токен');
+    }
+
+    const payload: JwtPayload = await this.jwtService.verifyAsync(refreshToken);
+
+    if (payload) {
+      const user = await this.prismaService.user.findUnique({
+        where: {
+          id: payload.id,
+        },
+      });
+      if (!user) {
+        throw new UnauthorizedException('Пользователь не найден');
+      }
+
+      return this.auth(res, user.id);
+    }
+  }
+
+  private auth(res: Response, id: string) {
+    const { accessToken, refreshToken } = this.generateTokens(id);
+    this.setCookie(
+      res,
+      refreshToken,
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    );
+
+    return { accessToken };
+  }
+
   private generateTokens(id: string) {
-    const payload = { id };
+    const payload: JwtPayload = { id };
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.JWT_ACCESS_TOKEN_TTL,
-    } as JwtSignOptions);
+    } as any);
 
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: this.JWT_REFRESH_TOKEN_TTL,
-    } as JwtSignOptions);
+    } as any);
 
     return {
       accessToken,
@@ -107,97 +159,7 @@ export class AuthService {
       domain: this.COOKIE_DOMAIN,
       expires,
       secure: !isDev(this.configService),
-      sameSite: isDev(this.configService) ? 'none' : 'lax',
-    });
-  }
-
-  private auth(res: Response, id: string): { accessToken: string } {
-    const { refreshToken, accessToken } = this.generateTokens(id);
-
-    this.setCookie(res, refreshToken, new Date(Date.now() + 60 * 60 * 24 * 7));
-
-    return { accessToken };
-  }
-
-  async refresh(req: Request, res: Response) {
-    const refreshToken = req.cookies['refreshToken'] as string | undefined;
-
-    if (!refreshToken) {
-      throw new UnauthorizedException('Недействительный рефреш токен');
-    }
-
-    const payload: JwtPayload = await this.jwtService.verifyAsync(refreshToken);
-
-    if (payload) {
-      const user = await this.prismaService.user.findUnique({
-        where: {
-          id: payload.id,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!user) {
-        throw new NotFoundException('Пользователь не найден');
-      }
-      return this.auth(res, user.id);
-    }
-  }
-
-  logout(res: Response) {
-    this.setCookie(res, '', new Date(0));
-    return true;
-  }
-
-  async validate(id: string) {
-    const user = await this.prismaService.user.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
-    }
-
-    return user;
-  }
-  async findAll() {
-    const users = await this.prismaService.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        tasks: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            isCompleted: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        },
-      },
-    });
-
-    return users;
-  }
-
-  async delete(id: string) {
-    return this.prismaService.$transaction(async (tx) => {
-      await tx.task.deleteMany({ where: { userId: id } });
-      await tx.user.delete({ where: { id } });
-      return true;
+      sameSite: 'lax',
     });
   }
 }
